@@ -18,33 +18,38 @@ URL_PREFIX = 'http://elib.zib.de/pub/mp-testdata/tsp/tsplib/tsp/'
 # =========================
 #  Read Data
 # =========================
-def read_tsp_data():
+def read_data():
+    # an array which contains numpy arrays of the coordinates
     locations = []
     with open("TSPDATA.txt", "r") as f:
+        # skip the first 2 lines of the txt file
         for i in range(2):
             next(f)
+        # remove the index column of the remaining text file
         content = [x.strip('\n')[5:] for x in f.readlines()]
-        col_num = 1
+        col_num = 1 # originally pointing at y column
         for row in content:
-            # delete the index, we need the coordinates only
+            # specify the x and y columns 
             locations.append(np.asarray([row.split()[col_num-1], row.split()[col_num]], dtype=np.int32))
 
-    # calculate distances using vector norm
+    
     number_cities = len(locations)
     distances = [[0] * number_cities for _ in locations]
+
+    # calculate distances
     for i in range(number_cities):
         for j in range(i + 1, number_cities):
-            # vector norm
+            # distance found using vector norm from numpy package
             distance = np.linalg.norm(locations[j] - locations[i])
             distances[i][j] = distances[j][i] = distance
 
-    print(f"================================================================\nlocations: {locations}")
+    print(f"\nlocations: {locations}")
     return locations, distances
 
 # =========================
 #  Set Parameters
 # =========================
-CITIES, DISTANCES = read_tsp_data()
+CITIES, DISTANCES = read_data()
 NUMBER_CITIES = len(CITIES)
 NUM_GENERATIONS = 3000
 POPULATION_SIZE = 100
@@ -60,17 +65,16 @@ print(individual)
 #  Calculate Distances
 # =========================
 def tsp_distance(individual: list) -> float:
-    """
-    Returns the traveling distance for particular ordering of cities.
-    :param individual: an ordered list of cities to visit.
-    :return: the total travelled distance.
-    """
     # get distance between first and last city
     distance = DISTANCES[individual[0]][individual[-1]]
     # add all other distances
     for i in range(NUMBER_CITIES - 1):
         distance += DISTANCES[individual[i]][individual[i + 1]]
     return distance
+
+def tspFitness(individual) -> tuple:
+    return tsp_distance(individual),
+
 
 creator.create('FitnessMin', base.Fitness, weights=(-1.0,))
 creator.create('Individual', array.array, typecode='i', fitness=creator.FitnessMin)
@@ -81,9 +85,6 @@ toolbox.register('randomOrder', random.sample, range(NUMBER_CITIES), NUMBER_CITI
 toolbox.register('individualCreator', tools.initIterate, creator.Individual, toolbox.randomOrder)
 # Create random population operator
 toolbox.register('populationCreator', tools.initRepeat, list, toolbox.individualCreator)
-
-def tspFitness(individual) -> tuple:
-    return tsp_distance(individual),
 
 toolbox.register('evaluate', tspFitness)
 toolbox.register('select', tools.selTournament, tournsize=3)
@@ -100,7 +101,7 @@ stats.register('min', np.min)
 stats.register('avg', np.mean)
 
 logbook = tools.Logbook()
-logbook.header = ['gen', 'nevals'] + stats.fields
+logbook.header = ['gen'] + stats.fields
 
 invalid_individuals = [ind for ind in population if not ind.fitness.valid]
 fitnesses = toolbox.map(toolbox.evaluate, invalid_individuals)
@@ -111,7 +112,7 @@ hof.update(population)
 hof_size = len(hof.items)
 
 record = stats.compile(population)
-logbook.record(gen=0, nevals=len(invalid_individuals), **record)
+logbook.record(gen=0, **record)
 print(logbook.stream)
 
 for gen in range(1, NUM_GENERATIONS + 1):
@@ -138,7 +139,7 @@ for gen in range(1, NUM_GENERATIONS + 1):
 
     # Append the current generation statistics to the logbook
     record = stats.compile(population) if stats else {}
-    logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+    logbook.record(gen=gen, **record)
     print(logbook.stream)
 
 best = hof.items[0]

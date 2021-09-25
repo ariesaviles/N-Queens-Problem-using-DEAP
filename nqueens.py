@@ -45,7 +45,7 @@ def evolution(*,
     toolbox.register("evaluate", lambda individual: (fitness_evaluation(individual),))
 
     # register mutators for individuals
-    toolbox.register("mate", tools.cxTwoPoint)
+    toolbox.register("mate", tools.cxOnePoint)
     toolbox.register("mutate", mutation_function[0], **mutation_function[1])
 
     # register next generation selection function
